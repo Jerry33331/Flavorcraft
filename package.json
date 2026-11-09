@@ -1,0 +1,22 @@
+{
+  "name": "flavorcraft",
+  "version": "1.0.0",
+  "description": "FlavorCraft - Global Culinary Arts & Home Cooking Platform",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "setup": "npm install && cd client && npm install && cd ../server && npm install",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm start",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start",
+    "seed": "cd server && npm run seed"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
