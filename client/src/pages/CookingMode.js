@@ -4,6 +4,39 @@ import axios from 'axios';
 import YouTube from 'react-youtube';
 import { ChefHat, Clock, Star, Heart, CheckSquare, Square, BookOpen, Note, PlayCircle, PauseCircle } from 'lucide-react';
 
+// Helper function to extract YouTube video ID from URL
+const extractYouTubeId = (url) => {
+  if (!url) return null;
+  
+  // Handle embed URLs: https://www.youtube.com/embed/VIDEO_ID
+  if (url.includes('youtube.com/embed/')) {
+    const parts = url.split('embed/');
+    const idPart = parts[1] || '';
+    // Remove any query parameters
+    return idPart.split('?')[0].split('&')[0];
+  }
+  
+  // Handle watch URLs: https://www.youtube.com/watch?v=VIDEO_ID
+  if (url.includes('youtube.com/watch')) {
+    const params = new URL(url).searchParams;
+    return params.get('v');
+  }
+  
+  // Handle short URLs: https://youtu.be/VIDEO_ID
+  if (url.includes('youtu.be/')) {
+    const parts = url.split('youtu.be/');
+    const idPart = parts[1] || '';
+    return idPart.split('?')[0].split('&')[0];
+  }
+  
+  // If URL is just the ID
+  if (url.length === 11 && !url.includes('/') && !url.includes('.')) {
+    return url;
+  }
+  
+  return null;
+};
+
 export default function CookingMode() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -102,14 +135,15 @@ export default function CookingMode() {
       </div>
 
       {/* Video */}
-      {recipe.video_url && (
+      {recipe?.video_url && extractYouTubeId(recipe.video_url) && (
         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Video Tutorial</h2>
           <div className="aspect-video bg-gray-900 rounded-xl overflow-hidden relative">
             <YouTube
-              videoId={recipe.video_url.split('embed/')[1] || recipe.video_url.split('v=')[1]}
+              videoId={extractYouTubeId(recipe.video_url)}
               opts={{ height: '100%', width: '100%', playerVars: { autoplay: 0, modestbranding: 1, rel: 0 } }}
               onStateChange={(e) => setIsPlaying(e.data === 1)}
+              onError={(e) => console.error('YouTube error:', e)}
             />
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
               <button onClick={() => {}} className="p-2 bg-white/20 rounded-full">
