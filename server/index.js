@@ -198,6 +198,65 @@ app.get('/api/flavors/synergy', (req, res) => {
   });
 });
 
+// Get pairing suggestions for an ingredient
+app.get('/api/flavors/:ingredient/suggestions', (req, res) => {
+  const { ingredient } = req.params;
+  
+  db.get('SELECT * FROM flavor_profiles WHERE ingredient = ?', [ingredient], (err, profile) => {
+    if (err || !profile) {
+      return res.status(404).json({ error: { message: 'Ingredient not found' } });
+    }
+    
+    // Get all other flavor profiles
+    db.all('SELECT * FROM flavor_profiles WHERE ingredient != ?', [ingredient], (err, allProfiles) => {
+      if (err) {
+        return res.status(500).json({ error: { message: 'Failed to get suggestions' } });
+      }
+      
+      const profileNotes = JSON.parse(profile.flavor_notes);
+      const profilePairings = JSON.parse(profile.pairings || '[]');
+      
+      // Calculate synergy scores for all other ingredients
+      const suggestions = allProfiles.map(otherProfile => {
+        const otherNotes = JSON.parse(otherProfile.flavor_notes);
+        const otherPairings = JSON.parse(otherProfile.pairings || '[]');
+        
+        const isMutual = profilePairings.includes(otherProfile.ingredient) && 
+          otherPairings.includes(ingredient);
+        const oneWay = profilePairings.includes(otherProfile.ingredient) || 
+          otherPairings.includes(ingredient);
+        
+        // Calculate flavor compatibility
+        let flavorCompat = 0;
+        ['acid', 'umami', 'sweet', 'spice', 'bitter'].forEach(f => {
+          const diff = Math.abs((profileNotes[f] || 0) - (otherNotes[f] || 0));
+          flavorCompat += 10 - (diff / 10 * 10);
+        });
+        flavorCompat /= 5;
+        
+        let score = 0;
+        if (isMutual) score = 90 + (flavorCompat * 0.1);
+        else if (oneWay) score = 70 + (flavorCompat * 0.2);
+        else score = 50 + (flavorCompat * 0.4);
+        score = Math.min(100, Math.max(0, Math.round(score)));
+        
+        return {
+          ingredient: otherProfile.ingredient,
+          synergy_score: score,
+          is_mutual_pairing: isMutual,
+          flavor_notes: otherNotes,
+          description: otherProfile.description
+        };
+      });
+      
+      // Sort by score descending
+      suggestions.sort((a, b) => b.synergy_score - a.synergy_score);
+      
+      res.json({ ingredient, suggestions });
+    });
+  });
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`FlavorCraft server running on port ${PORT}`);
