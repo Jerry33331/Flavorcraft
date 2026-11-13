@@ -26,13 +26,19 @@ db.serialize(() => db.run('PRAGMA foreign_keys = ON;'));
 
 // Initialize database
 const initDb = () => {
-  const schema = fs.readFileSync(path.join(__dirname, '../db/schema.sql'), 'utf8');
-  db.exec(schema, (err) => {
-    if (err) console.error('DB init error:', err.message);
-    else console.log('Database initialized');
+  return new Promise((resolve, reject) => {
+    const schema = fs.readFileSync(path.join(__dirname, '../db/schema.sql'), 'utf8');
+    db.exec(schema, (err) => {
+      if (err) {
+        console.error('DB init error:', err.message);
+        reject(err);
+      } else {
+        console.log('Database initialized');
+        resolve();
+      }
+    });
   });
 };
-initDb();
 
 // Auth middleware
 const authenticate = (req, res, next) => {
@@ -257,9 +263,16 @@ app.get('/api/flavors/:ingredient/suggestions', (req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`FlavorCraft server running on port ${PORT}`);
+// Start server after database is initialized
+initDb().then(() => {
+  app.listen(PORT, () => {
+    console.log(`FlavorCraft server running on port ${PORT}`);
+    console.log(`Database: SQLite`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}).catch(err => {
+  console.error('Failed to start server:', err.message);
+  process.exit(1);
 });
 
 module.exports = app;
