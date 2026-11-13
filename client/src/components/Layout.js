@@ -25,7 +25,13 @@ export default function Layout({ children }) {
     { path: '/', label: 'Home', icon: <Home className="w-5 h-5" /> },
     { path: '/recipes', label: 'Recipes', icon: <Grid3X3 className="w-5 h-5" /> },
     { path: '/flavor-matcher', label: 'Flavor Matcher', icon: <Heart className="w-5 h-5" /> },
-    { path: '/cookbooks', label: 'Cookbooks', icon: <BookOpen className="w-5 h-5" /> },
+    ...(user ? [
+      { path: '/cookbooks', label: 'Cookbooks', icon: <BookOpen className="w-5 h-5" /> },
+      { path: '/profile', label: 'Profile', icon: <User className="w-5 h-5" /> }
+    ] : [
+      { path: '/login', label: 'Login', icon: <User className="w-5 h-5" /> },
+      { path: '/register', label: 'Register', icon: <Plus className="w-5 h-5" /> }
+    ])
   ];
   
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
@@ -69,7 +75,7 @@ export default function Layout({ children }) {
                 )}
               </button>
 
-              {user ? (
+              {user && (
                 <>
                   <Link to="/profile" className="hidden sm:flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <User className="w-5 h-5" />
@@ -81,21 +87,6 @@ export default function Layout({ children }) {
                   >
                     Logout
                   </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    to="/login"
-                    className="px-4 py-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium transition-colors"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors"
-                  >
-                    Register
-                  </Link>
                 </>
               )}
 
@@ -145,46 +136,17 @@ export default function Layout({ children }) {
                 </Link>
               ))}
               
-              {user ? (
-                <>
-                  <Link
-                    to="/profile"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <User className="w-5 h-5" />
-                    <span>Profile</span>
-                  </Link>
-                  <button
-                    onClick={() => {
-                      logout();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                    <span>Logout</span>
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    to="/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 rounded-lg text-amber-600 dark:text-amber-400 font-medium transition-colors"
-                  >
-                    <User className="w-5 h-5" />
-                    <span>Login</span>
-                  </Link>
-                  <Link
-                    to="/register"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-medium transition-colors"
-                  >
-                    <Plus className="w-5 h-5" />
-                    <span>Register</span>
-                  </Link>
-                </>
+              {user && (
+                <button
+                  onClick={() => {
+                    logout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                  <span>Logout</span>
+                </button>
               )}
             </nav>
           </div>
