@@ -162,6 +162,66 @@ app.post('/api/cookbooks', authenticate, (req, res) => {
     });
 });
 
+// Favorites routes
+app.get('/api/favorites', authenticate, (req, res) => {
+  db.all(`
+    SELECT r.* FROM recipes r
+    JOIN user_favorites uf ON r.id = uf.recipe_id
+    WHERE uf.user_id = ?
+  `, [req.user.id], (err, recipes) => {
+    if (err) return res.status(500).json({ error: { message: 'Failed to get favorites' } });
+    res.json({ recipes });
+  });
+});
+
+app.post('/api/favorites/:recipeId', authenticate, (req, res) => {
+  const { recipeId } = req.params;
+  db.run('INSERT OR IGNORE INTO user_favorites (user_id, recipe_id) VALUES (?, ?)',
+    [req.user.id, recipeId], function(err) {
+      if (err) return res.status(500).json({ error: { message: 'Failed to add favorite' } });
+      res.json({ message: 'Added to favorites', favorite: { user_id: req.user.id, recipe_id: recipeId } });
+    });
+});
+
+app.delete('/api/favorites/:recipeId', authenticate, (req, res) => {
+  const { recipeId } = req.params;
+  db.run('DELETE FROM user_favorites WHERE user_id = ? AND recipe_id = ?',
+    [req.user.id, recipeId], function(err) {
+      if (err) return res.status(500).json({ error: { message: 'Failed to remove favorite' } });
+      res.json({ message: 'Removed from favorites' });
+    });
+});
+
+// Ratings routes
+app.post('/api/recipes/:recipeId/rate', authenticate, (req, res) => {
+  const { recipeId } = req.params;
+  const { rating } = req.body;
+  
+  if (!rating || rating < 1 || rating > 5) {
+    return res.status(400).json({ error: { message: 'Rating must be between 1 and 5' } });
+  }
+  
+  db.run('INSERT OR REPLACE INTO user_ratings (user_id, recipe_id, rating) VALUES (?, ?, ?)',
+    [req.user.id, recipeId, rating], function(err) {
+      if (err) return res.status(500).json({ error: { message: 'Failed to rate recipe' } });
+      
+      // Update recipe average rating
+      db.all('SELECT AVG(rating) as avg, COUNT(*) as count FROM user_ratings WHERE recipe_id = ?',
+        [recipeId], (err, results) => {
+          if (err) return res.status(500).json({ error: { message: 'Failed to update rating' } });
+          
+          const avgRating = results[0]?.avg || 0;
+          const ratingCount = results[0]?.count || 0;
+          
+          db.run('UPDATE recipes SET average_rating = ?, rating_count = ? WHERE id = ?',
+            [avgRating, ratingCount, recipeId], (err) => {
+              if (err) console.error('Failed to update recipe rating:', err.message);
+              res.json({ message: 'Rating saved', rating, avgRating, ratingCount });
+            });
+        });
+    });
+});
+
 // Flavor routes
 app.get('/api/flavors', (req, res) => {
   db.all('SELECT * FROM flavor_profiles', (err, profiles) => {
