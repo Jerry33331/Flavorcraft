@@ -162,6 +162,50 @@ app.post('/api/cookbooks', authenticate, (req, res) => {
     });
 });
 
+// Cookbook recipes routes
+app.get('/api/cookbooks/:id', authenticate, (req, res) => {
+  const { id } = req.params;
+  db.get('SELECT * FROM cookbooks WHERE id = ? AND user_id = ?', [id, req.user.id], (err, cookbook) => {
+    if (!cookbook) return res.status(404).json({ error: { message: 'Cookbook not found' } });
+    db.all(`
+      SELECT r.* FROM recipes r
+      JOIN cookbook_recipes cr ON r.id = cr.recipe_id
+      WHERE cr.cookbook_id = ?
+    `, [id], (err, recipes) => {
+      res.json({ cookbook: { ...cookbook, recipes } });
+    });
+  });
+});
+
+app.post('/api/cookbooks/:id/recipes', authenticate, (req, res) => {
+  const { id } = req.params;
+  const { recipeId } = req.body;
+  
+  db.get('SELECT * FROM cookbooks WHERE id = ? AND user_id = ?', [id, req.user.id], (err, cookbook) => {
+    if (!cookbook) return res.status(404).json({ error: { message: 'Cookbook not found' } });
+    
+    db.run('INSERT OR IGNORE INTO cookbook_recipes (cookbook_id, recipe_id) VALUES (?, ?)',
+      [id, recipeId], function(err) {
+        if (err) return res.status(500).json({ error: { message: 'Failed to add recipe to cookbook' } });
+        res.json({ message: 'Recipe added to cookbook' });
+      });
+  });
+});
+
+app.delete('/api/cookbooks/:id/recipes/:recipeId', authenticate, (req, res) => {
+  const { id, recipeId } = req.params;
+  
+  db.get('SELECT * FROM cookbooks WHERE id = ? AND user_id = ?', [id, req.user.id], (err, cookbook) => {
+    if (!cookbook) return res.status(404).json({ error: { message: 'Cookbook not found' } });
+    
+    db.run('DELETE FROM cookbook_recipes WHERE cookbook_id = ? AND recipe_id = ?',
+      [id, recipeId], function(err) {
+        if (err) return res.status(500).json({ error: { message: 'Failed to remove recipe from cookbook' } });
+        res.json({ message: 'Recipe removed from cookbook' });
+      });
+  });
+});
+
 // Favorites routes
 app.get('/api/favorites', authenticate, (req, res) => {
   db.all(`
